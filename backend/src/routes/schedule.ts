@@ -109,75 +109,72 @@ router.post(
       useRequests
     );
 
-    // 기존 근무표 삭제 후 새로 저장 (upsert)
-    const client = await (await import('../database/connection')).default.connect();
-    try {
-      await client.query('BEGIN');
+    // 기존 근무표 조회 또는 생성 (배치 처리로 API 호출 최소화)
+    let scheduleId: number;
+    const existing = await query(
+      'SELECT id FROM schedules WHERE ward_id = $1 AND year = $2 AND month = $3',
+      [wardId, year, month]
+    );
 
-      // 기존 근무표 조회 또는 생성
-      let scheduleId: number;
-      const existing = await client.query(
-        'SELECT id FROM schedules WHERE ward_id = $1 AND year = $2 AND month = $3',
+    if (existing.rows.length > 0) {
+      scheduleId = existing.rows[0].id;
+      await query('DELETE FROM schedule_entries WHERE schedule_id = $1', [scheduleId]);
+      await query(
+        'UPDATE schedules SET generated_at = NOW(), updated_at = NOW() WHERE id = $1',
+        [scheduleId]
+      );
+    } else {
+      const newSchedule = await query(
+        `INSERT INTO schedules (ward_id, year, month, generated_at)
+         VALUES ($1, $2, $3, NOW())
+         RETURNING id`,
         [wardId, year, month]
       );
+      scheduleId = newSchedule.rows[0].id;
+    }
 
-      if (existing.rows.length > 0) {
-        scheduleId = existing.rows[0].id;
-        // 기존 엔트리 삭제
-        await client.query('DELETE FROM schedule_entries WHERE schedule_id = $1', [scheduleId]);
-        await client.query(
-          'UPDATE schedules SET generated_at = NOW(), updated_at = NOW() WHERE id = $1',
-          [scheduleId]
-        );
-      } else {
-        const newSchedule = await client.query(
-          `INSERT INTO schedules (ward_id, year, month, generated_at)
-           VALUES ($1, $2, $3, NOW())
-           RETURNING id`,
-          [wardId, year, month]
-        );
-        scheduleId = newSchedule.rows[0].id;
-      }
+    // 배치 INSERT: 모든 엔트리를 단일 쿼리로 삽입
+    if (entries.length > 0) {
+      const escape = (v: any): string => {
+        if (v === null || v === undefined) return 'NULL';
+        if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+        if (typeof v === 'number') return String(v);
+        return `'${String(v).replace(/'/g, "''")}'`;
+      };
 
-      // 새 엔트리 삽입
-      for (const entry of entries) {
-        await client.query(
+      // 500개씩 청크로 나눠서 삽입 (URL 길이 제한 대비)
+      const CHUNK = 500;
+      for (let i = 0; i < entries.length; i += CHUNK) {
+        const chunk = entries.slice(i, i + CHUNK);
+        const values = chunk
+          .map(
+            (e) =>
+              `(${escape(scheduleId)},${escape(e.nurseId)},${escape(e.day)},` +
+              `${escape(e.shift)},${escape(e.role)},${escape(e.isViolation)},` +
+              `${escape(e.violationReason || null)})`
+          )
+          .join(',');
+        await query(
           `INSERT INTO schedule_entries
              (schedule_id, nurse_id, day, shift, role, is_violation, violation_reason)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [
-            scheduleId,
-            entry.nurseId,
-            entry.day,
-            entry.shift,
-            entry.role,
-            entry.isViolation,
-            entry.violationReason || null,
-          ]
+           VALUES ${values}`
         );
       }
-
-      await client.query('COMMIT');
-
-      const elapsed = Date.now() - startTime;
-      console.log(`✅ 근무표 생성 완료 (${elapsed}ms), 위반 ${violations.length}건`);
-
-      res.json({
-        success: true,
-        data: {
-          scheduleId,
-          entryCount: entries.length,
-          violationCount: violations.length,
-          violations,
-          elapsed,
-        },
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
     }
+
+    const elapsed = Date.now() - startTime;
+    console.log(`✅ 근무표 생성 완료 (${elapsed}ms), 위반 ${violations.length}건`);
+
+    res.json({
+      success: true,
+      data: {
+        scheduleId,
+        entryCount: entries.length,
+        violationCount: violations.length,
+        violations,
+        elapsed,
+      },
+    });
   })
 );
 
