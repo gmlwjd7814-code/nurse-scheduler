@@ -10,12 +10,14 @@ import path from 'path';
 // .env 파일 로드
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-// 연결 풀 생성 (동시 연결 최대 10개)
+const isProduction = process.env.NODE_ENV === 'production';
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 10,                 // 최대 연결 수
-  idleTimeoutMillis: 30000, // 유휴 연결 30초 후 제거
-  connectionTimeoutMillis: 2000, // 연결 타임아웃 2초
+  max: isProduction ? 3 : 10,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 10000,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
 // 연결 오류 이벤트 처리
