@@ -7,6 +7,7 @@ import nursesRouter from '../src/routes/nurses';
 import scheduleRouter from '../src/routes/schedule';
 import settingsRouter from '../src/routes/settings';
 import statsRouter from '../src/routes/stats';
+import holidaysRouter from '../src/routes/holidays';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use('/api/nurses', nursesRouter);
 app.use('/api/schedule', scheduleRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/holidays', holidaysRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

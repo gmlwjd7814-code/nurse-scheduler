@@ -10,11 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { settingsApi, nurseApi } from '@/lib/api';
+import { settingsApi, nurseApi, holidayApi, Holiday } from '@/lib/api';
 import { WardSettings, Nurse, RANK_LABELS } from '@/types';
 import { toast } from 'sonner';
 
 const WARD_ID = 1;
+const MONTH_NAMES = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<WardSettings | null>(null);
@@ -24,6 +25,13 @@ export default function SettingsPage() {
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [offOverrides, setOffOverrides] = useState<Record<number, number | null>>({});
   const [savingOff, setSavingOff] = useState(false);
+
+  // 공휴일 관리 상태
+  const currentYear = new Date().getFullYear();
+  const [holidayYear, setHolidayYear] = useState(currentYear);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
+  const [addingHoliday, setAddingHoliday] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -40,6 +48,41 @@ export default function SettingsPage() {
       toast.error('설정 로드 실패');
     }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    holidayApi.list(holidayYear)
+      .then(setHolidays)
+      .catch(() => toast.error('공휴일 로드 실패'));
+  }, [holidayYear]);
+
+  const handleAddHoliday = async () => {
+    if (!newHoliday.date || !newHoliday.name.trim()) {
+      toast.error('날짜와 이름을 입력해주세요');
+      return;
+    }
+    const [year, month, day] = newHoliday.date.split('-').map(Number);
+    setAddingHoliday(true);
+    try {
+      const created = await holidayApi.create({ year, month, day, name: newHoliday.name.trim() });
+      setHolidays((prev) => [...prev, created].sort((a, b) => a.month - b.month || a.day - b.day));
+      setNewHoliday({ date: '', name: '' });
+      toast.success(`${month}월 ${day}일 "${newHoliday.name}" 추가됨`);
+    } catch (err: any) {
+      toast.error(err.message || '추가 실패');
+    } finally {
+      setAddingHoliday(false);
+    }
+  };
+
+  const handleDeleteHoliday = async (id: number, label: string) => {
+    try {
+      await holidayApi.delete(id);
+      setHolidays((prev) => prev.filter((h) => h.id !== id));
+      toast.success(`"${label}" 삭제됨`);
+    } catch (err: any) {
+      toast.error(err.message || '삭제 실패');
+    }
+  };
 
   const handleChange = (key: keyof WardSettings, value: number) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -341,6 +384,84 @@ export default function SettingsPage() {
           <Button size="sm" onClick={handleSaveOffOverrides} disabled={savingOff}>
             {savingOff ? '저장 중...' : '멤버별 오프 수 저장'}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* 공휴일 관리 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">공휴일 관리</CardTitle>
+          <p className="text-sm text-gray-500">근무표 생성 시 공휴일로 처리할 날짜를 관리합니다</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 연도 선택 */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setHolidayYear((y) => y - 1)}
+              className="w-8 h-8 rounded border border-gray-200 hover:bg-gray-100 font-bold text-gray-600"
+            >‹</button>
+            <span className="font-semibold text-gray-900 w-16 text-center">{holidayYear}년</span>
+            <button
+              onClick={() => setHolidayYear((y) => y + 1)}
+              className="w-8 h-8 rounded border border-gray-200 hover:bg-gray-100 font-bold text-gray-600"
+            >›</button>
+          </div>
+
+          {/* 공휴일 목록 */}
+          {holidays.length === 0 ? (
+            <p className="text-sm text-gray-400 py-2">등록된 공휴일이 없습니다</p>
+          ) : (
+            <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+              {(() => {
+                const byMonth: Record<number, Holiday[]> = {};
+                holidays.forEach((h) => {
+                  if (!byMonth[h.month]) byMonth[h.month] = [];
+                  byMonth[h.month].push(h);
+                });
+                return Object.entries(byMonth).map(([m, hs]) => (
+                  <div key={m}>
+                    <p className="text-xs font-semibold text-gray-400 mt-2 mb-1">{MONTH_NAMES[Number(m) - 1]}</p>
+                    {hs.map((h) => (
+                      <div key={h.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 group">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-gray-700 w-12">
+                            {h.month}/{h.day}
+                          </span>
+                          <span className="text-sm text-gray-900">{h.name}</span>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteHoliday(h.id, h.name)}
+                          className="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-1.5 py-0.5 rounded hover:bg-red-50"
+                        >삭제</button>
+                      </div>
+                    ))}
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+
+          {/* 공휴일 추가 폼 */}
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+            <input
+              type="date"
+              value={newHoliday.date}
+              min={`${holidayYear}-01-01`}
+              max={`${holidayYear}-12-31`}
+              onChange={(e) => setNewHoliday((p) => ({ ...p, date: e.target.value }))}
+              className="h-9 rounded-md border border-gray-200 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <Input
+              placeholder="공휴일 이름"
+              value={newHoliday.name}
+              onChange={(e) => setNewHoliday((p) => ({ ...p, name: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddHoliday(); }}
+              className="h-9 text-sm flex-1"
+            />
+            <Button size="sm" onClick={handleAddHoliday} disabled={addingHoliday} className="shrink-0">
+              {addingHoliday ? '추가 중...' : '+ 추가'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

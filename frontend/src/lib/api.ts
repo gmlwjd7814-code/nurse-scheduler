@@ -116,3 +116,26 @@ export const statsApi = {
   get: (wardId: number, year: number, month: number) =>
     apiFetch<NurseMonthlyStats[]>(`/stats/${wardId}/${year}/${month}`),
 };
+
+// ===== 공휴일 API =====
+export interface Holiday {
+  id: number;
+  year: number;
+  month: number;
+  day: number;
+  name: string;
+}
+
+export const holidayApi = {
+  list: (year: number) =>
+    apiFetch<Holiday[]>(`/holidays?year=${year}`),
+
+  create: (data: { year: number; month: number; day: number; name: string }) =>
+    apiFetch<Holiday>('/holidays', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiFetch<null>(`/holidays/${id}`, { method: 'DELETE' }),
+};
