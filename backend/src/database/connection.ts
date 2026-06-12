@@ -37,7 +37,7 @@ async function executeQuery(sql: string, params?: any[]): Promise<{ rows: any[];
     throw new Error(`DB query failed (${response.status}): ${errText}`);
   }
 
-  const data = await response.json();
+  const data: any = await response.json();
 
   if (data && data.message) {
     throw new Error(data.message);

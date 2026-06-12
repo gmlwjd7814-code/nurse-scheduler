@@ -25,7 +25,7 @@ export function errorHandler(
   res.status(500).json({
     success: false,
     error: '서버 내부 오류',
-    message: err.message,
+    message: process.env.NODE_ENV === 'development' ? err.message : '서버 오류가 발생했습니다',
   });
 }
 
