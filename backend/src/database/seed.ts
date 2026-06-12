@@ -255,6 +255,7 @@ async function seedDatabase(): Promise<void> {
     await client.query('DELETE FROM schedules');
     await client.query('DELETE FROM shift_requests');
     await client.query('DELETE FROM nurses');
+    await client.query('DELETE FROM holidays');
     console.log('🗑️  기존 데이터 제거 완료');
 
     // 간호사 데이터 삽입 (preceptor_id 없이 먼저 삽입)
@@ -307,6 +308,41 @@ async function seedDatabase(): Promise<void> {
       );
     }
     console.log('✅ 샘플 희망 오프 신청 완료');
+
+    // ===== 2026년 대한민국 공휴일 (대체공휴일 포함) =====
+    const holidays2026 = [
+      // 기본 공휴일
+      { month: 1,  day: 1,  name: '신정' },
+      { month: 1,  day: 28, name: '설날 연휴' },
+      { month: 1,  day: 29, name: '설날' },
+      { month: 1,  day: 30, name: '설날 연휴' },
+      { month: 3,  day: 1,  name: '삼일절' },
+      { month: 3,  day: 2,  name: '삼일절 대체공휴일' },   // 3/1 일→월
+      { month: 5,  day: 5,  name: '어린이날' },
+      { month: 5,  day: 25, name: '부처님오신날' },
+      { month: 6,  day: 3,  name: '지방선거일' },           // 임시공휴일
+      { month: 6,  day: 6,  name: '현충일' },
+      { month: 6,  day: 8,  name: '현충일 대체공휴일' },    // 6/6 토→월
+      { month: 7,  day: 17, name: '제헌절' },
+      { month: 8,  day: 15, name: '광복절' },
+      { month: 8,  day: 17, name: '광복절 대체공휴일' },    // 8/15 토→월
+      { month: 9,  day: 24, name: '추석 연휴' },
+      { month: 9,  day: 25, name: '추석' },
+      { month: 9,  day: 26, name: '추석 연휴' },
+      { month: 9,  day: 28, name: '추석 대체공휴일' },      // 9/26 토→월
+      { month: 10, day: 3,  name: '개천절' },
+      { month: 10, day: 5,  name: '개천절 대체공휴일' },    // 10/3 토→월
+      { month: 10, day: 9,  name: '한글날' },
+      { month: 12, day: 25, name: '크리스마스' },
+    ];
+    for (const h of holidays2026) {
+      await client.query(
+        `INSERT INTO holidays (year, month, day, name) VALUES (2026, $1, $2, $3)
+         ON CONFLICT DO NOTHING`,
+        [h.month, h.day, h.name]
+      );
+    }
+    console.log(`✅ 2026년 공휴일 ${holidays2026.length}개 삽입 완료`);
 
     await client.query('COMMIT');
 
