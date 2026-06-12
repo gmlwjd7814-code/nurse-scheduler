@@ -1,0 +1,29 @@
+# Docker Compose 설정
+# PostgreSQL 데이터베이스만 Docker로 실행
+# 프론트엔드/백엔드는 로컬에서 실행
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nurse_scheduler_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nurse_scheduler
+      POSTGRES_USER: nurse_admin
+      POSTGRES_PASSWORD: nurse_pass_2024
+      PGDATA: /data/postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/data/postgres
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nurse_admin -d nurse_scheduler']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: nurse_scheduler_postgres_data
