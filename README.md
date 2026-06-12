@@ -1,50 +1,15 @@
 # 🏥 Nurse Scheduler AI — 간호사 근무표 자동 생성 시스템
 
-병원 간호사 3교대 근무를 AI로 자동 생성하는 웹 시스템입니다.
+병원 간호사 3교대 근무를 AI로 자동 생성하는 풀스택 웹 시스템입니다.
 
 ---
 
-## 🚀 시작하기 (최초 1회)
+## 🌐 배포 URL
 
-### 사전 준비
-- Node.js 18+
-- Docker Desktop (PostgreSQL용)
-
-### 1단계: PostgreSQL 시작
-```bash
-cd /Users/shindh/Desktop/바이브폴더/duty
-docker-compose up -d postgres
-```
-
-### 2단계: 백엔드 설정
-```bash
-cd backend
-npm install
-npx ts-node src/database/init.ts   # 테이블 생성
-npx ts-node src/database/seed.ts   # 30명 샘플 데이터 삽입
-```
-
-### 3단계: 프론트엔드 설정
-```bash
-cd ../frontend
-npm install
-```
-
----
-
-## ▶️ 실행
-
-터미널 2개를 열어 각각 실행:
-
-```bash
-# 터미널 1 - 백엔드 (포트 3001)
-cd backend && npm run dev
-
-# 터미널 2 - 프론트엔드 (포트 3000)
-cd frontend && npm run dev
-```
-
-브라우저에서 **http://localhost:3000** 접속
+| 서비스 | URL |
+|--------|-----|
+| 프론트엔드 | https://frontend-gmlwjd-s-projects.vercel.app |
+| 백엔드 API | https://nurse-scheduler-backend-ecru.vercel.app |
 
 ---
 
@@ -52,12 +17,12 @@ cd frontend && npm run dev
 
 | 페이지 | 기능 |
 |--------|------|
-| 대시보드 | 전체 현황 요약, 빠른 메뉴 |
-| 근무표 | AI 자동 생성, 셀 클릭 수정, Excel/PDF 출력 |
-| 희망 오프 신청 | O/Y/H/YH 신청, 달력 형태 현황 |
-| 간호사 관리 | 등록/수정/비활성화, 역량·근무형태 설정 |
-| 통계 | 개인별 D/E/N 횟수, 역할 횟수, 위반 여부 |
-| 설정 | 필요 인원 수, 월 오프 개수, 야간전담 설정 |
+| 대시보드 | 전체 현황 요약 (간호사 수·위반 건수), 간호사 현황, 근무 코드 안내 |
+| 근무표 | AI 자동 생성, 인터랙티브/근무표/달력 뷰, 셀 드래그 근무 교환, Excel·인쇄 |
+| 희망 오프 신청 | O/Y/H/YH 신청, 날짜별 신청 현황 달력, AI 생성 시 우선 반영 |
+| 간호사 관리 | 등록/수정/비활성화, 역량·근무형태 설정, 유형별 필터 |
+| 통계 | 개인별 D/E/N 횟수·총시간·역할 횟수·위반 여부, Excel 다운로드 |
+| 설정 | 평일·주말 필요 인원, 월 오프 수, 연속 근무 제한, 멤버별 오프 수 |
 
 ---
 
@@ -102,11 +67,14 @@ cd frontend && npm run dev
 
 ## 🛠 기술 스택
 
-- **Frontend**: Next.js 15, TypeScript, TailwindCSS, ShadCN UI
-- **Backend**: Node.js, Express, TypeScript
-- **Database**: PostgreSQL 16
-- **Excel**: ExcelJS
-- **알고리즘**: Constraint-based Greedy + Rule Validation
+| 영역 | 기술 |
+|------|------|
+| Frontend | Next.js 15 (App Router), TypeScript, TailwindCSS, ShadCN UI |
+| Backend | Node.js, Express, TypeScript, Vercel Serverless |
+| Database | Supabase (PostgreSQL) — HTTP Adapter |
+| Excel | ExcelJS |
+| 배포 | Vercel (프론트엔드 + 백엔드) |
+| 알고리즘 | Constraint-based Greedy + Rule Validation |
 
 ---
 
@@ -115,17 +83,61 @@ cd frontend && npm run dev
 ```
 duty/
 ├── backend/
+│   ├── api/
+│   │   └── index.ts        # Vercel serverless 진입점
 │   └── src/
-│       ├── database/   # 스키마, 초기화, 샘플 데이터
-│       ├── services/   # 스케줄러 AI, Excel 생성
-│       ├── routes/     # nurses, schedule, settings, stats
-│       ├── types/      # TypeScript 타입
-│       └── index.ts    # Express 서버
+│       ├── database/       # Supabase HTTP 어댑터
+│       ├── services/       # 스케줄러 AI, Excel 생성
+│       ├── routes/         # nurses, schedule, settings, stats
+│       ├── types/          # TypeScript 타입
+│       └── middleware/     # 에러 핸들러
 ├── frontend/
 │   └── src/
-│       ├── app/        # 페이지 (Next.js App Router)
-│       ├── components/ # UI 컴포넌트
-│       ├── lib/        # API 클라이언트
-│       └── types/      # TypeScript 타입
-└── docker-compose.yml  # PostgreSQL
+│       ├── app/            # 페이지 (Next.js App Router)
+│       ├── components/     # UI 컴포넌트
+│       ├── lib/            # API 클라이언트
+│       └── types/          # TypeScript 타입
+└── docker-compose.yml      # 로컬 개발용 PostgreSQL
 ```
+
+---
+
+## 💻 로컬 개발 환경 설정
+
+### 사전 준비
+- Node.js 18+
+- Docker Desktop (로컬 PostgreSQL용)
+
+### 환경 변수 설정
+
+**backend/.env**
+```env
+SUPABASE_PROJECT_REF=your_project_ref
+SUPABASE_ACCESS_TOKEN=your_access_token
+FRONTEND_URL=http://localhost:3000
+NODE_ENV=development
+```
+
+**frontend/.env.local**
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+```
+
+### 실행
+
+```bash
+# 백엔드 (포트 3001)
+cd backend && npm install && npm run dev
+
+# 프론트엔드 (포트 3000)
+cd frontend && npm install && npm run dev
+```
+
+브라우저에서 **http://localhost:3000** 접속
+
+---
+
+## 🗄 데이터베이스
+
+Supabase PostgreSQL을 HTTP Adapter로 연결합니다.
+Supabase Management API의 레이트 리밋(60 req/min)을 고려해 INSERT는 배치 처리(500행/쿼리)로 최적화되어 있습니다.
