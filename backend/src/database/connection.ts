@@ -1,37 +1,67 @@
 /**
- * PostgreSQL 데이터베이스 연결 설정
- * pg 라이브러리의 Pool을 사용하여 연결 풀을 관리합니다
+ * Supabase HTTP adapter — pg Pool interface 호환
+ * DNS/pooler 없이 Management API로 직접 SQL 실행
  */
 
-import { Pool } from 'pg';
-import dotenv from 'dotenv';
-import path from 'path';
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || 'gzapjfzsntarufwfkcvn';
+const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+const API_URL = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
 
-// .env 파일 로드
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+function escapeLiteral(value: any): string {
+  if (value === null || value === undefined) return 'NULL';
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  if (typeof value === 'number') return String(value);
+  if (value instanceof Date) return `'${value.toISOString()}'`;
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
 
-const isProduction = process.env.NODE_ENV === 'production';
+function interpolate(sql: string, params: any[]): string {
+  if (!params || params.length === 0) return sql;
+  return sql.replace(/\$(\d+)/g, (_, idx) => escapeLiteral(params[Number(idx) - 1]));
+}
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: isProduction ? 3 : 10,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 10000,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
-});
+async function executeQuery(sql: string, params?: any[]): Promise<{ rows: any[]; rowCount: number | null }> {
+  const finalSql = interpolate(sql, params || []);
 
-// 연결 오류 이벤트 처리
-pool.on('error', (err) => {
-  console.error('데이터베이스 연결 오류:', err);
-});
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query: finalSql }),
+  });
 
-// 연결 테스트 함수
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`DB query failed (${response.status}): ${errText}`);
+  }
+
+  const data = await response.json();
+
+  if (data && data.message) {
+    throw new Error(data.message);
+  }
+
+  const rows: any[] = Array.isArray(data) ? data : [];
+  return { rows, rowCount: rows.length };
+}
+
+// pg Pool 호환 인터페이스
+const pool = {
+  query: executeQuery,
+  connect: async () => ({
+    query: executeQuery,
+    release: () => {},
+  }),
+  end: async () => {},
+  on: (_event: string, _handler: any) => {},
+};
+
 export async function testConnection(): Promise<boolean> {
   try {
-    const client = await pool.connect();
-    await client.query('SELECT NOW()');
-    client.release();
-    console.log('✅ 데이터베이스 연결 성공');
+    await executeQuery('SELECT 1');
+    console.log('✅ 데이터베이스 연결 성공 (HTTP)');
     return true;
   } catch (error) {
     console.error('❌ 데이터베이스 연결 실패:', error);
@@ -39,13 +69,11 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
-// 쿼리 실행 헬퍼 함수
 export async function query<T = any>(
   text: string,
   params?: any[]
 ): Promise<{ rows: T[]; rowCount: number | null }> {
-  const result = await pool.query(text, params);
-  return { rows: result.rows as T[], rowCount: result.rowCount };
+  return executeQuery(text, params) as Promise<{ rows: T[]; rowCount: number | null }>;
 }
 
-export default pool;
+export default pool as any;
