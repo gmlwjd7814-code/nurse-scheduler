@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { scheduleApi, nurseApi, settingsApi } from '@/lib/api';
+import { scheduleApi, nurseApi, settingsApi, holidayApi, Holiday } from '@/lib/api';
 import { FullSchedule, Nurse, ScheduleViolation, WardSettings } from '@/types';
 import { toast } from 'sonner';
 
@@ -44,6 +44,7 @@ export default function SchedulePage() {
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [violations, setViolations] = useState<ScheduleViolation[]>([]);
   const [settings, setSettings] = useState<WardSettings | null>(null);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState('table');
@@ -51,14 +52,16 @@ export default function SchedulePage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scheduleData, nurseData, settingsData] = await Promise.all([
+      const [scheduleData, nurseData, settingsData, holidayData] = await Promise.all([
         scheduleApi.get(WARD_ID, year, month).catch(() => null),
         nurseApi.list(WARD_ID),
         settingsApi.get(WARD_ID),
+        holidayApi.list(year),
       ]);
       setNurses(nurseData);
       setSettings(settingsData);
       setFullSchedule(scheduleData);
+      setHolidays(holidayData);
     } catch (err: any) {
       toast.error(err.message || '데이터 로드 실패');
     } finally {
@@ -204,6 +207,7 @@ export default function SchedulePage() {
                   entries={fullSchedule.entries}
                   year={year}
                   month={month}
+                  holidays={holidays}
                   onUpdate={loadData}
                 />
               </CardContent>
@@ -224,6 +228,7 @@ export default function SchedulePage() {
                   entries={fullSchedule.entries}
                   year={year}
                   month={month}
+                  holidays={holidays}
                   onUpdate={loadData}
                 />
               </CardContent>

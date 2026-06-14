@@ -62,23 +62,24 @@ router.put(
     const {
       weekdayDCount, weekdayECount, weekdayNCount,
       weekendDCount, weekendECount, weekendNCount,
-      monthlyOffCount, maxConsecutiveNE, maxConsecutiveWork,
+      monthlyOffCount, maxConsecutiveNE, maxConsecutiveWork, wardName,
     } = req.body;
 
     const result = await query(
       `UPDATE ward_settings
        SET
-         weekday_d_count      = COALESCE($1,  weekday_d_count),
-         weekday_e_count      = COALESCE($2,  weekday_e_count),
-         weekday_n_count      = COALESCE($3,  weekday_n_count),
-         weekend_d_count      = COALESCE($4,  weekend_d_count),
-         weekend_e_count      = COALESCE($5,  weekend_e_count),
-         weekend_n_count      = COALESCE($6,  weekend_n_count),
-         monthly_off_count    = COALESCE($7,  monthly_off_count),
-         max_consecutive_ne   = COALESCE($8,  max_consecutive_ne),
-         max_consecutive_work = COALESCE($9,  COALESCE(max_consecutive_work, 6)),
+         ward_name            = COALESCE($1,  ward_name),
+         weekday_d_count      = COALESCE($2,  weekday_d_count),
+         weekday_e_count      = COALESCE($3,  weekday_e_count),
+         weekday_n_count      = COALESCE($4,  weekday_n_count),
+         weekend_d_count      = COALESCE($5,  weekend_d_count),
+         weekend_e_count      = COALESCE($6,  weekend_e_count),
+         weekend_n_count      = COALESCE($7,  weekend_n_count),
+         monthly_off_count    = COALESCE($8,  monthly_off_count),
+         max_consecutive_ne   = COALESCE($9,  max_consecutive_ne),
+         max_consecutive_work = COALESCE($10, COALESCE(max_consecutive_work, 6)),
          updated_at           = NOW()
-       WHERE ward_id = $10
+       WHERE ward_id = $11
        RETURNING
          id, ward_id as "wardId", ward_name as "wardName",
          weekday_d_count as "weekdayDCount",
@@ -91,6 +92,7 @@ router.put(
          max_consecutive_ne as "maxConsecutiveNE",
          COALESCE(max_consecutive_work, 6) AS "maxConsecutiveWork"`,
       [
+        wardName ?? null,
         weekdayDCount, weekdayECount, weekdayNCount,
         weekendDCount, weekendECount, weekendNCount,
         monthlyOffCount, maxConsecutiveNE, maxConsecutiveWork, wardId,

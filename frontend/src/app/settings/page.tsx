@@ -166,9 +166,14 @@ export default function SettingsPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">병동 정보</CardTitle></CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="font-medium">병동명:</span>
-            <span>{settings.wardName}</span>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium shrink-0">병동명</Label>
+            <Input
+              value={(form.wardName as string) ?? settings.wardName ?? ''}
+              onChange={(e) => setForm((f) => ({ ...f, wardName: e.target.value }))}
+              className="max-w-xs h-8 text-sm"
+              placeholder="병동명 입력"
+            />
           </div>
         </CardContent>
       </Card>

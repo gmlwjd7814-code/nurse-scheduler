@@ -43,6 +43,9 @@ export const nurseApi = {
       body: JSON.stringify(data),
     }),
 
+  deactivate: (id: number) =>
+    apiFetch<void>(`/nurses/${id}/deactivate`, { method: 'PATCH' }),
+
   delete: (id: number) =>
     apiFetch<void>(`/nurses/${id}`, { method: 'DELETE' }),
 };

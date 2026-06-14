@@ -15,7 +15,7 @@ import {
 } from '@/types';
 import ScheduleCell from './ScheduleCell';
 import ShiftEditDialog from './ShiftEditDialog';
-import { scheduleApi } from '@/lib/api';
+import { scheduleApi, Holiday } from '@/lib/api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
@@ -24,68 +24,12 @@ interface ScheduleTableProps {
   entries: ScheduleEntry[];
   year: number;
   month: number;
-  onUpdate?: () => void; // 수정 후 새로고침 콜백
+  holidays: Holiday[];
+  onUpdate?: () => void;
 }
 
-// 날짜의 요일 반환 (0=일, 6=토)
 function getDayOfWeek(year: number, month: number, day: number): number {
   return new Date(year, month - 1, day).getDay();
-}
-
-// 대한민국 공휴일 (대체공휴일 포함)
-const KR_HOLIDAYS: Set<string> = new Set([
-  // 2025
-  '2025-01-01', // 신정
-  '2025-01-28', '2025-01-29', '2025-01-30', // 설날 연휴
-  '2025-03-01', // 삼일절
-  '2025-03-03', // 삼일절 대체 (3/1 토→월)
-  '2025-05-05', // 어린이날·부처님오신날 겹침
-  '2025-05-06', // 어린이날 대체 (5/5 월→화)
-  '2025-06-06', // 현충일
-  '2025-08-15', // 광복절
-  '2025-10-03', // 개천절
-  '2025-10-05', '2025-10-06', '2025-10-07', // 추석 연휴
-  '2025-10-08', // 추석 대체 (10/5 일→수)
-  '2025-10-09', // 한글날
-  '2025-12-25', // 크리스마스
-  // 2026
-  '2026-01-01', // 신정
-  '2026-01-28', '2026-01-29', '2026-01-30', // 설날 연휴
-  '2026-03-01', // 삼일절
-  '2026-03-02', // 삼일절 대체 (3/1 일→월)
-  '2026-05-05', // 어린이날
-  '2026-05-25', // 부처님오신날
-  '2026-06-03', // 지방선거일 (임시공휴일)
-  '2026-06-06', // 현충일
-  '2026-06-08', // 현충일 대체 (6/6 토→월)
-  '2026-08-15', // 광복절
-  '2026-08-17', // 광복절 대체 (8/15 토→월)
-  '2026-09-24', '2026-09-25', '2026-09-26', // 추석 연휴
-  '2026-09-28', // 추석 대체 (9/26 토→월)
-  '2026-10-03', // 개천절
-  '2026-10-05', // 개천절 대체 (10/3 토→월)
-  '2026-10-09', // 한글날
-  '2026-12-25', // 크리스마스
-  // 2027
-  '2027-01-01', // 신정
-  '2027-02-16', '2027-02-17', '2027-02-18', // 설날 연휴
-  '2027-03-01', // 삼일절
-  '2027-05-05', // 어린이날
-  '2027-05-13', // 부처님오신날
-  '2027-06-06', // 현충일
-  '2027-06-07', // 현충일 대체 (6/6 일→월)
-  '2027-08-15', // 광복절
-  '2027-08-16', // 광복절 대체 (8/15 일→월)
-  '2027-10-03', // 개천절
-  '2027-10-04', '2027-10-05', '2027-10-06', // 추석 연휴
-  '2027-10-09', // 한글날
-  '2027-10-11', // 한글날 대체 (10/9 토→월)
-  '2027-12-25', // 크리스마스
-]);
-
-function isHoliday(year: number, month: number, day: number): boolean {
-  const key = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  return KR_HOLIDAYS.has(key);
 }
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -130,8 +74,15 @@ export default function ScheduleTable({
   entries,
   year,
   month,
+  holidays,
   onUpdate,
 }: ScheduleTableProps) {
+  const holidaySet = new Set(
+    holidays.map((h) => `${h.year}-${String(h.month).padStart(2, '0')}-${String(h.day).padStart(2, '0')}`)
+  );
+  const isHoliday = (y: number, m: number, d: number) =>
+    holidaySet.has(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+
   const daysInMonth = new Date(year, month, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 

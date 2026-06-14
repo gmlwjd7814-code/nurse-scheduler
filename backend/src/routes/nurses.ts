@@ -174,8 +174,8 @@ router.put(
 );
 
 // ===== 간호사 비활성화 (soft delete) =====
-router.delete(
-  '/:id',
+router.patch(
+  '/:id/deactivate',
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     await query(
@@ -183,6 +183,23 @@ router.delete(
       [id]
     );
     res.json({ success: true, message: '간호사가 비활성화되었습니다' });
+  })
+);
+
+// ===== 간호사 영구 삭제 (hard delete) =====
+router.delete(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    await query(`DELETE FROM shift_requests WHERE nurse_id = $1`, [id]);
+    await query(`DELETE FROM schedule_entries WHERE nurse_id = $1`, [id]);
+    await query(`UPDATE nurses SET preceptor_id = NULL WHERE preceptor_id = $1`, [id]);
+    const result = await query(`DELETE FROM nurses WHERE id = $1 RETURNING id`, [id]);
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, error: '간호사를 찾을 수 없습니다' });
+      return;
+    }
+    res.json({ success: true, message: '간호사가 삭제되었습니다' });
   })
 );
 

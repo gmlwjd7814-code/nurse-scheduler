@@ -149,14 +149,25 @@ export default function NursesPage() {
     }
   };
 
-  const handleDelete = async (nurse: Nurse) => {
-    if (!confirm(`${nurse.name} 간호사를 비활성화하시겠습니까?`)) return;
+  const handleDeactivate = async (nurse: Nurse) => {
+    if (!confirm(`${nurse.name} 간호사를 비활성화하시겠습니까?\n(비활성화된 간호사는 근무표 생성에서 제외됩니다)`)) return;
     try {
-      await nurseApi.delete(nurse.id);
+      await nurseApi.deactivate(nurse.id);
       toast.success('비활성화되었습니다');
       await loadNurses();
     } catch {
       toast.error('비활성화 실패');
+    }
+  };
+
+  const handleDelete = async (nurse: Nurse) => {
+    if (!confirm(`${nurse.name} 간호사를 영구 삭제하시겠습니까?\n⚠️ 삭제하면 해당 간호사의 모든 근무 데이터도 함께 삭제됩니다. 복구할 수 없습니다.`)) return;
+    try {
+      await nurseApi.delete(nurse.id);
+      toast.success('삭제되었습니다');
+      await loadNurses();
+    } catch {
+      toast.error('삭제 실패');
     }
   };
 
@@ -284,12 +295,21 @@ export default function NursesPage() {
                           <Button size="sm" variant="ghost" onClick={() => openEdit(nurse)} className="h-7 px-2 text-xs">
                             수정
                           </Button>
+                          {nurse.isActive && (
+                            <Button
+                              size="sm" variant="ghost"
+                              onClick={() => handleDeactivate(nurse)}
+                              className="h-7 px-2 text-xs text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
+                            >
+                              비활성화
+                            </Button>
+                          )}
                           <Button
                             size="sm" variant="ghost"
                             onClick={() => handleDelete(nurse)}
                             className="h-7 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
                           >
-                            비활성화
+                            삭제
                           </Button>
                         </div>
                       </td>

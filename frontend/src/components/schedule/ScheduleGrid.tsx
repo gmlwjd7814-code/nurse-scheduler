@@ -25,7 +25,7 @@ import {
   RANK_LABELS, WORK_TYPE_LABELS,
 } from '@/types';
 import ShiftEditDialog from './ShiftEditDialog';
-import { scheduleApi } from '@/lib/api';
+import { scheduleApi, Holiday } from '@/lib/api';
 import { toast } from 'sonner';
 
 // AG Grid 모듈 등록 (앱 전체에서 1회)
@@ -55,6 +55,7 @@ interface ScheduleGridProps {
   entries: ScheduleEntry[];
   year: number;
   month: number;
+  holidays: Holiday[];
   onUpdate?: () => void;
 }
 
@@ -224,19 +225,13 @@ function NurseLabelRenderer({ data }: ICellRendererParams<ScheduleRow>) {
 }
 
 // ─── 날짜 헤더 스타일 ──────────────────────────────────────
-const HOLIDAYS_2026 = new Set([
-  '2026-01-01', '2026-01-28', '2026-01-29', '2026-01-30',
-  '2026-03-01', '2026-05-05', '2026-05-25', '2026-06-06',
-  '2026-08-15', '2026-09-24', '2026-09-25', '2026-09-26',
-  '2026-10-03', '2026-10-09', '2026-12-25',
-]);
 const DAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
-function dayMeta(year: number, month: number, day: number) {
+function dayMeta(year: number, month: number, day: number, holidaySet: Set<string>) {
   const date = new Date(year, month - 1, day);
   const dow = date.getDay();
   const key = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const isHoliday = HOLIDAYS_2026.has(key);
+  const isHoliday = holidaySet.has(key);
   const isSun = dow === 0;
   const isSat = dow === 6;
   return { dow, isHoliday, isSun, isSat, name: DAY_KO[dow] };
@@ -278,10 +273,14 @@ export default function ScheduleGrid({
   entries,
   year,
   month,
+  holidays,
   onUpdate,
 }: ScheduleGridProps) {
   const gridRef = useRef<GridApi | null>(null);
   const daysInMonth = new Date(year, month, 0).getDate();
+  const holidaySet = new Set(
+    holidays.map((h) => `${h.year}-${String(h.month).padStart(2, '0')}-${String(h.day).padStart(2, '0')}`)
+  );
 
   const [editTarget, setEditTarget] = useState<{
     entryId: number;
@@ -343,7 +342,7 @@ export default function ScheduleGrid({
     ];
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const { isSun, isSat, isHoliday, name } = dayMeta(year, month, d);
+      const { isSun, isSat, isHoliday, name } = dayMeta(year, month, d, holidaySet);
       const isRed = isSun || isHoliday;
       const isBlue = isSat && !isHoliday;
 
