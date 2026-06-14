@@ -1139,73 +1139,34 @@ export async function generateSchedule(
 
     assignShift('D');
 
-    // D 배정 후 시니어 선확보 (N 배정 전에 실행 → 시니어가 N에 빼앗기지 않음)
+    assignShift('N');
+    assignShift('E');
+
+    // [보완] Desk 가능 인력이 없으면 설정 인원 범위 안에서만 Desk 보유자 D/E 배정
     {
-      const hasSeniorDE = threeShiftStates.some(
-        (s) => (s.shifts[idx] === 'D' || s.shifts[idx] === 'E') &&
-               (s.nurse.rank === 'HEAD' || s.nurse.rank === 'CHARGE')
+      const deAssigned = threeShiftStates.filter(
+        (s) => s.shifts[idx] === 'D' || s.shifts[idx] === 'E'
       );
-      if (!hasSeniorDE) {
-        const seniorUnassigned = threeShiftStates.filter(
-          (s) =>
-            s.shifts[idx] === null &&
-            (s.nurse.rank === 'CHARGE' || s.nurse.rank === 'RN') &&
-            s.nurse.yearsOfService >= 3
+      const hasDeskCapable = deAssigned.some((s) => s.nurse.capability === 'Desk');
+      if (!hasDeskCapable) {
+        const reqD = getRequiredCount('D', dayInfo, settings);
+        const reqE = getRequiredCount('E', dayInfo, settings);
+        const deskUnassigned = threeShiftStates.filter(
+          (s) => s.shifts[idx] === null && s.nurse.capability === 'Desk'
         );
-        for (const picked of seniorUnassigned) {
-          if (canAssign('D', picked, idx, dayInfo, settings, threeShiftStates)) {
+        for (const picked of deskUnassigned) {
+          // D 자리가 남아있으면 D, 아니면 E 자리가 남아있으면 E
+          if (counts['D'] < reqD && canAssign('D', picked, idx, dayInfo, settings, threeShiftStates)) {
             picked.shifts[idx] = 'D';
             applyShiftToState(picked, 'D', dayInfo);
             counts['D'] = (counts['D'] || 0) + 1;
             break;
+          } else if (counts['E'] < reqE && canAssign('E', picked, idx, dayInfo, settings, threeShiftStates)) {
+            picked.shifts[idx] = 'E';
+            applyShiftToState(picked, 'E', dayInfo);
+            counts['E'] = (counts['E'] || 0) + 1;
+            break;
           }
-        }
-      }
-    }
-
-    assignShift('N');
-    assignShift('E');
-
-    // [1순위 보완] Desk 가능 인력이 없으면 Desk 역량 보유자를 강제 D/E 배정
-    const deAssigned = threeShiftStates.filter(
-      (s) => s.shifts[idx] === 'D' || s.shifts[idx] === 'E'
-    );
-    const hasDeskCapable = deAssigned.some((s) => s.nurse.capability === 'Desk');
-    if (!hasDeskCapable) {
-      const deskNurseUnassigned = threeShiftStates.filter(
-        (s) => s.shifts[idx] === null && s.nurse.capability === 'Desk'
-      );
-      for (const picked of deskNurseUnassigned) {
-        const shiftToAssign: ShiftCode = 'D';
-        if (canAssign(shiftToAssign, picked, idx, dayInfo, settings, threeShiftStates)) {
-          picked.shifts[idx] = shiftToAssign;
-          applyShiftToState(picked, shiftToAssign, dayInfo);
-          counts[shiftToAssign] = (counts[shiftToAssign] || 0) + 1;
-          break;
-        }
-      }
-    }
-
-    // [1순위 보완] 시니어(Charge+) 없으면 강제 배정
-    const deNow = threeShiftStates.filter(
-      (s) => s.shifts[idx] === 'D' || s.shifts[idx] === 'E'
-    );
-    const hasSenior = deNow.some(
-      (s) => s.nurse.rank === 'HEAD' || s.nurse.rank === 'CHARGE'
-    );
-    if (!hasSenior) {
-      const seniorUnassigned = threeShiftStates.filter(
-        (s) =>
-          s.shifts[idx] === null &&
-          (s.nurse.rank === 'CHARGE' || s.nurse.rank === 'RN') &&
-          s.nurse.yearsOfService >= 3 // 3년차 이상 대리 역할
-      );
-      for (const picked of seniorUnassigned) {
-        if (canAssign('D', picked, idx, dayInfo, settings, threeShiftStates)) {
-          picked.shifts[idx] = 'D';
-          applyShiftToState(picked, 'D', dayInfo);
-          counts['D'] = (counts['D'] || 0) + 1;
-          break;
         }
       }
     }
