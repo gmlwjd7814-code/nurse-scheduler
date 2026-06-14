@@ -135,7 +135,20 @@ export default function SchedulePage() {
             <>
               <Button
                 size="sm" variant="outline"
-                onClick={() => window.open(scheduleApi.excelUrl(wardId, year, month), '_blank')}
+                onClick={async () => {
+                  const { getToken } = await import('@/lib/auth');
+                  const token = getToken();
+                  const res = await fetch(scheduleApi.excelUrl(wardId, year, month), {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                  });
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `근무표_${year}년${month}월.xlsx`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
               >
                 Excel
               </Button>
