@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 import { errorHandler } from '../src/middleware/errorHandler';
+import { query } from '../src/database/connection';
 import nursesRouter from '../src/routes/nurses';
 import scheduleRouter from '../src/routes/schedule';
 import settingsRouter from '../src/routes/settings';
@@ -10,6 +11,9 @@ import statsRouter from '../src/routes/stats';
 import holidaysRouter from '../src/routes/holidays';
 
 dotenv.config();
+
+// DB 자동 마이그레이션 (컬럼 추가)
+query(`ALTER TABLE ward_settings ADD COLUMN IF NOT EXISTS head_nurse_sat_week SMALLINT DEFAULT 1`).catch(() => {});
 
 const app = express();
 

@@ -103,7 +103,9 @@ function getRequiredCount(shift: ShiftCode, dayInfo: DayInfo, settings: WardSett
 }
 
 // ===== 수간호사 배정 =====
-function assignHeadNurse(state: NurseState, dayInfos: DayInfo[]): void {
+// headNurseSatWeek: 1 = 홀수 번째 토요일 근무(1,3,5번째 토→D, 2,4번째 토→O)
+//                  2 = 짝수 번째 토요일 근무(2,4번째 토→D, 1,3,5번째 토→O)
+function assignHeadNurse(state: NurseState, dayInfos: DayInfo[], headNurseSatWeek: number = 1): void {
   let saturdayCount = 0;
   for (const info of dayInfos) {
     const idx = info.day - 1;
@@ -113,7 +115,12 @@ function assignHeadNurse(state: NurseState, dayInfos: DayInfo[]): void {
       shift = 'O';
     } else if (info.isSaturday) {
       saturdayCount++;
-      shift = saturdayCount % 2 === 0 ? 'O' : 'D';
+      // headNurseSatWeek=1: 홀수 토(1,3,5) → D, 짝수 토(2,4) → O
+      // headNurseSatWeek=2: 짝수 토(2,4) → D, 홀수 토(1,3,5) → O
+      const isWorkSat = headNurseSatWeek === 1
+        ? saturdayCount % 2 === 1
+        : saturdayCount % 2 === 0;
+      shift = isWorkSat ? 'D' : 'O';
     } else {
       shift = 'D';
     }
@@ -1090,7 +1097,8 @@ export async function generateSchedule(
   const threeShiftStates = allStates.filter((s) => s.nurse.workType === 'THREE_SHIFT');
 
   // ===== Step 1: 수간호사 =====
-  for (const s of headStates) assignHeadNurse(s, dayInfos);
+  const satWeek = (settings as any).headNurseSatWeek ?? 1;
+  for (const s of headStates) assignHeadNurse(s, dayInfos, satWeek);
 
   // ===== Step 2: 야간전담 =====
   nightOnlyStates.forEach((s, i) =>

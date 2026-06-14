@@ -74,6 +74,8 @@ export interface WardSettings {
   maxConsecutiveNE: number;
   // 최대 연속 근무일 (기본 6)
   maxConsecutiveWork: number;
+  // 수간호사 근무 토요일 주차 (1=홀수 토, 2=짝수 토)
+  headNurseSatWeek: number;
   updatedAt: Date;
 }
 

@@ -38,7 +38,8 @@ export interface WardSettings {
   weekendNCount: number;
   monthlyOffCount: number;
   maxConsecutiveNE: number;
-  maxConsecutiveWork: number; // 최대 연속 근무일 (기본 6)
+  maxConsecutiveWork: number;
+  headNurseSatWeek: number; // 수간호사 근무 토요일: 1=홀수번째, 2=짝수번째
 }
 
 export interface ShiftRequest {

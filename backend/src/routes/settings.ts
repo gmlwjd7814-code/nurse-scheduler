@@ -39,6 +39,7 @@ router.get(
          monthly_off_count as "monthlyOffCount",
          max_consecutive_ne as "maxConsecutiveNE",
          COALESCE(max_consecutive_work, 6) as "maxConsecutiveWork",
+         COALESCE(head_nurse_sat_week, 1) as "headNurseSatWeek",
          updated_at as "updatedAt"
        FROM ward_settings
        WHERE ward_id = $1`,
@@ -62,7 +63,8 @@ router.put(
     const {
       weekdayDCount, weekdayECount, weekdayNCount,
       weekendDCount, weekendECount, weekendNCount,
-      monthlyOffCount, maxConsecutiveNE, maxConsecutiveWork, wardName,
+      monthlyOffCount, maxConsecutiveNE, maxConsecutiveWork,
+      wardName, headNurseSatWeek,
     } = req.body;
 
     const result = await query(
@@ -78,8 +80,9 @@ router.put(
          monthly_off_count    = COALESCE($8,  monthly_off_count),
          max_consecutive_ne   = COALESCE($9,  max_consecutive_ne),
          max_consecutive_work = COALESCE($10, COALESCE(max_consecutive_work, 6)),
+         head_nurse_sat_week  = COALESCE($11, COALESCE(head_nurse_sat_week, 1)),
          updated_at           = NOW()
-       WHERE ward_id = $11
+       WHERE ward_id = $12
        RETURNING
          id, ward_id as "wardId", ward_name as "wardName",
          weekday_d_count as "weekdayDCount",
@@ -90,12 +93,14 @@ router.put(
          weekend_n_count as "weekendNCount",
          monthly_off_count as "monthlyOffCount",
          max_consecutive_ne as "maxConsecutiveNE",
-         COALESCE(max_consecutive_work, 6) AS "maxConsecutiveWork"`,
+         COALESCE(max_consecutive_work, 6) AS "maxConsecutiveWork",
+         COALESCE(head_nurse_sat_week, 1) AS "headNurseSatWeek"`,
       [
         wardName ?? null,
         weekdayDCount, weekdayECount, weekdayNCount,
         weekendDCount, weekendECount, weekendNCount,
-        monthlyOffCount, maxConsecutiveNE, maxConsecutiveWork, wardId,
+        monthlyOffCount, maxConsecutiveNE, maxConsecutiveWork,
+        headNurseSatWeek ?? null, wardId,
       ]
     );
 

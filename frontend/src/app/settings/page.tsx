@@ -332,6 +332,37 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* 수간호사 토요일 설정 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">수간호사 격주 토요일 설정</CardTitle>
+          <p className="text-sm text-gray-500">이번 달 첫 번째 토요일이 근무일인지 오프일인지 선택합니다</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            {[
+              { value: 1, label: '홀수 토 근무', desc: '1, 3, 5번째 토요일 근무 · 2, 4번째 토요일 오프' },
+              { value: 2, label: '짝수 토 근무', desc: '2, 4번째 토요일 근무 · 1, 3, 5번째 토요일 오프' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setForm((f) => ({ ...f, headNurseSatWeek: opt.value }))}
+                className={`flex-1 rounded-lg border-2 px-4 py-3 text-left transition-colors ${
+                  (form.headNurseSatWeek ?? 1) === opt.value
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className={`font-semibold text-sm ${(form.headNurseSatWeek ?? 1) === opt.value ? 'text-blue-700' : 'text-gray-900'}`}>
+                  {opt.label}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* 멤버별 오프 수 설정 */}
       <Card>
         <CardHeader>
