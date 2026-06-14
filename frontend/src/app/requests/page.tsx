@@ -10,10 +10,11 @@ import { nurseApi } from '@/lib/api';
 import { Nurse } from '@/types';
 import RequestForm from '@/components/schedule/RequestForm';
 import { Badge } from '@/components/ui/badge';
-
-const WARD_ID = 1;
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/AuthGuard';
 
 export default function RequestsPage() {
+  const { wardId } = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -21,8 +22,9 @@ export default function RequestsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    nurseApi.list(WARD_ID).then(setNurses).catch(console.error).finally(() => setLoading(false));
-  }, []);
+    if (!wardId) return;
+    nurseApi.list(wardId).then(setNurses).catch(console.error).finally(() => setLoading(false));
+  }, [wardId]);
 
   const goPrevMonth = () => {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
@@ -34,6 +36,7 @@ export default function RequestsPage() {
   };
 
   return (
+    <AuthGuard>
     <div className="space-y-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
@@ -73,11 +76,12 @@ export default function RequestsPage() {
       ) : (
         <RequestForm
           nurses={nurses}
-          wardId={WARD_ID}
+          wardId={wardId}
           year={year}
           month={month}
         />
       )}
     </div>
+    </AuthGuard>
   );
 }

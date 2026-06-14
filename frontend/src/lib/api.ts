@@ -7,13 +7,19 @@ import {
   Nurse, WardSettings, FullSchedule, ScheduleViolation,
   NurseMonthlyStats, ShiftRequest, ShiftCode
 } from '@/types';
+import { getToken } from './auth';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 // 공통 fetch 헬퍼
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? getToken() : null;
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
     ...options,
   });
 
@@ -23,6 +29,16 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   }
   return data.data as T;
 }
+
+// ===== 인증 API =====
+export const authApi = {
+  login: (username: string, password: string) =>
+    apiFetch<{ token: string; wardId: number; wardName: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+  me: () => apiFetch<{ wardId: number; wardName: string }>('/auth/me'),
+};
 
 // ===== 간호사 API =====
 export const nurseApi = {

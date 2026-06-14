@@ -13,10 +13,11 @@ import { NurseMonthlyStats } from '@/types';
 import StatsTable from '@/components/stats/StatsTable';
 import { toast } from 'sonner';
 import { scheduleApi } from '@/lib/api';
-
-const WARD_ID = 1;
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/AuthGuard';
 
 export default function StatsPage() {
+  const { wardId } = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -24,16 +25,17 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
 
   const loadStats = useCallback(async () => {
+    if (!wardId) return;
     setLoading(true);
     try {
-      const data = await statsApi.get(WARD_ID, year, month);
+      const data = await statsApi.get(wardId, year, month);
       setStats(data);
     } catch {
       setStats([]);
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [wardId, year, month]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
@@ -48,7 +50,7 @@ export default function StatsPage() {
 
   // 엑셀로 통계 다운로드 (근무표 Excel에 포함됨)
   const handleExcelDownload = () => {
-    const url = scheduleApi.excelUrl(WARD_ID, year, month);
+    const url = scheduleApi.excelUrl(wardId, year, month);
     window.open(url, '_blank');
   };
 
@@ -58,6 +60,7 @@ export default function StatsPage() {
   ).length;
 
   return (
+    <AuthGuard>
     <div className="space-y-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
@@ -130,5 +133,6 @@ export default function StatsPage() {
         </CardContent>
       </Card>
     </div>
+    </AuthGuard>
   );
 }

@@ -23,8 +23,8 @@ import {
   RANK_LABELS, WORK_TYPE_LABELS
 } from '@/types';
 import { toast } from 'sonner';
-
-const WARD_ID = 1;
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/AuthGuard';
 
 const RANK_OPTIONS: { value: NurseRank; label: string }[] = [
   { value: 'HEAD', label: '수간호사' },
@@ -67,17 +67,19 @@ type FormData = {
   preceptorId: number | null;
 };
 
-const defaultForm: FormData = {
-  name: '',
-  rank: 'RN',
-  yearsOfService: 0,
-  workType: 'THREE_SHIFT',
-  capability: 'Acting',
-  wardId: WARD_ID,
-  preceptorId: null,
-};
-
 export default function NursesPage() {
+  const { wardId } = useAuth();
+
+  const defaultForm: FormData = {
+    name: '',
+    rank: 'RN',
+    yearsOfService: 0,
+    workType: 'THREE_SHIFT',
+    capability: 'Acting',
+    wardId,
+    preceptorId: null,
+  };
+
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -87,22 +89,23 @@ export default function NursesPage() {
   const [filterWorkType, setFilterWorkType] = useState<string>('ALL');
 
   const loadNurses = useCallback(async () => {
+    if (!wardId) return;
     setLoading(true);
     try {
-      const data = await nurseApi.list(WARD_ID);
+      const data = await nurseApi.list(wardId);
       setNurses(data);
     } catch {
       toast.error('간호사 목록 로드 실패');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [wardId]);
 
   useEffect(() => { loadNurses(); }, [loadNurses]);
 
   const openCreate = () => {
     setEditTarget(null);
-    setForm(defaultForm);
+    setForm({ name: '', rank: 'RN', yearsOfService: 0, workType: 'THREE_SHIFT', capability: 'Acting', wardId, preceptorId: null });
     setDialogOpen(true);
   };
 
@@ -189,6 +192,7 @@ export default function NursesPage() {
   };
 
   return (
+    <AuthGuard>
     <div className="space-y-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
@@ -447,5 +451,6 @@ export default function NursesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </AuthGuard>
   );
 }

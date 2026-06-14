@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { scheduleApi, nurseApi, settingsApi, holidayApi, Holiday } from '@/lib/api';
 import { FullSchedule, Nurse, ScheduleViolation, WardSettings } from '@/types';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/AuthGuard';
 
 // AG Grid / FullCalendar: SSR 방지
 const ScheduleGrid = dynamic(
@@ -33,9 +35,8 @@ const ScheduleTable = dynamic(
   { ssr: false, loading: () => <div className="text-center py-10 text-gray-400">표 로딩 중...</div> }
 );
 
-const WARD_ID = 1;
-
 export default function SchedulePage() {
+  const { wardId, wardName } = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -50,12 +51,13 @@ export default function SchedulePage() {
   const [activeTab, setActiveTab] = useState('table');
 
   const loadData = useCallback(async () => {
+    if (!wardId) return;
     setLoading(true);
     try {
       const [scheduleData, nurseData, settingsData, holidayData] = await Promise.all([
-        scheduleApi.get(WARD_ID, year, month).catch(() => null),
-        nurseApi.list(WARD_ID),
-        settingsApi.get(WARD_ID),
+        scheduleApi.get(wardId, year, month).catch(() => null),
+        nurseApi.list(wardId),
+        settingsApi.get(wardId),
         holidayApi.list(year),
       ]);
       setNurses(nurseData);
@@ -67,14 +69,14 @@ export default function SchedulePage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [wardId, year, month]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      const result = await scheduleApi.generate(WARD_ID, year, month, true);
+      const result = await scheduleApi.generate(wardId, year, month, true);
       toast.success(`근무표 생성 완료 — 위반 ${result.violationCount}건 (${result.elapsed}ms)`);
       setViolations(result.violations);
       await loadData();
@@ -99,6 +101,7 @@ export default function SchedulePage() {
   const violationWarnings = violations.filter((v) => v.severity === 'WARNING');
 
   return (
+    <AuthGuard>
     <div className="space-y-4 print:space-y-2">
       {/* 헤더 */}
       <div className="flex items-center justify-between print:hidden">
@@ -132,7 +135,7 @@ export default function SchedulePage() {
             <>
               <Button
                 size="sm" variant="outline"
-                onClick={() => window.open(scheduleApi.excelUrl(WARD_ID, year, month), '_blank')}
+                onClick={() => window.open(scheduleApi.excelUrl(wardId, year, month), '_blank')}
               >
                 Excel
               </Button>
@@ -192,7 +195,7 @@ export default function SchedulePage() {
             <Card>
               <CardHeader className="pb-2 print:py-1">
                 <CardTitle className="text-sm text-gray-600 font-normal print:text-base print:font-bold">
-                  내과 병동 {year}년 {month}월 근무표
+                  {wardName || '병동'} {year}년 {month}월 근무표
                   {fullSchedule.schedule.generatedAt && (
                     <span className="ml-2 text-xs text-gray-400">
                       (생성: {new Date(fullSchedule.schedule.generatedAt).toLocaleString('ko-KR')})
@@ -219,7 +222,7 @@ export default function SchedulePage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-gray-600 font-normal">
-                  내과 병동 {year}년 {month}월 근무표
+                  {wardName || '병동'} {year}년 {month}월 근무표
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -329,5 +332,6 @@ export default function SchedulePage() {
         </Tabs>
       )}
     </div>
+    </AuthGuard>
   );
 }

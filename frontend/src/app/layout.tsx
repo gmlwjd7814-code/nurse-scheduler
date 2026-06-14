@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Navigation from "@/components/Navigation";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -19,11 +20,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`${geist.className} bg-gray-50 min-h-screen antialiased`}>
-        <Navigation />
-        <main className="max-w-screen-2xl mx-auto px-4 py-6">
-          {children}
-        </main>
-        <Toaster richColors position="top-right" />
+        <AuthProvider>
+          <Navigation />
+          <main className="max-w-screen-2xl mx-auto px-4 py-6">
+            {children}
+          </main>
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
       </body>
     </html>
   );

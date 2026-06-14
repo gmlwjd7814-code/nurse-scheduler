@@ -6,6 +6,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NAV_ITEMS = [
   { href: '/', label: '대시보드', icon: '🏠' },
@@ -18,6 +19,10 @@ const NAV_ITEMS = [
 
 export default function Navigation() {
   const pathname = usePathname();
+  const { isLoggedIn, wardName, logout } = useAuth();
+
+  // 로그인 페이지에서는 네비게이션 숨김
+  if (!isLoggedIn || pathname === '/login') return null;
 
   return (
     <nav className="bg-white border-b border-gray-200 shadow-sm">
@@ -32,7 +37,7 @@ export default function Navigation() {
           </Link>
 
           {/* 네비게이션 링크 */}
-          <div className="flex items-center gap-1 overflow-x-auto">
+          <div className="flex items-center gap-1 overflow-x-auto flex-1">
             {NAV_ITEMS.map((item) => {
               const isActive =
                 item.href === '/'
@@ -56,6 +61,21 @@ export default function Navigation() {
                 </Link>
               );
             })}
+          </div>
+
+          {/* 병동 정보 + 로그아웃 */}
+          <div className="flex items-center gap-3 shrink-0">
+            {wardName && (
+              <span className="text-sm text-gray-600 font-medium whitespace-nowrap">
+                {wardName}
+              </span>
+            )}
+            <button
+              onClick={logout}
+              className="text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors whitespace-nowrap"
+            >
+              로그아웃
+            </button>
           </div>
         </div>
       </div>

@@ -13,11 +13,13 @@ import { Label } from '@/components/ui/label';
 import { settingsApi, nurseApi, holidayApi, Holiday } from '@/lib/api';
 import { WardSettings, Nurse, RANK_LABELS } from '@/types';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/AuthGuard';
 
-const WARD_ID = 1;
 const MONTH_NAMES = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
 export default function SettingsPage() {
+  const { wardId } = useAuth();
   const [settings, setSettings] = useState<WardSettings | null>(null);
   const [form, setForm] = useState<Partial<WardSettings>>({});
   const [saving, setSaving] = useState(false);
@@ -34,9 +36,10 @@ export default function SettingsPage() {
   const [addingHoliday, setAddingHoliday] = useState(false);
 
   useEffect(() => {
+    if (!wardId) return;
     Promise.all([
-      settingsApi.get(WARD_ID),
-      nurseApi.list(WARD_ID),
+      settingsApi.get(wardId),
+      nurseApi.list(wardId),
     ]).then(([settingsData, nurseData]) => {
       setSettings(settingsData);
       setForm(settingsData);
@@ -47,7 +50,7 @@ export default function SettingsPage() {
     }).catch(() => {
       toast.error('설정 로드 실패');
     }).finally(() => setLoading(false));
-  }, []);
+  }, [wardId]);
 
   useEffect(() => {
     holidayApi.list(holidayYear)
@@ -91,7 +94,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await settingsApi.update(WARD_ID, form);
+      await settingsApi.update(wardId, form);
       toast.success('설정이 저장되었습니다');
     } catch (err: any) {
       toast.error(err.message || '저장 실패');
@@ -116,8 +119,8 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) return <div className="text-center py-20 text-gray-400">로딩 중...</div>;
-  if (!settings) return <div className="text-center py-20 text-red-400">설정을 불러올 수 없습니다</div>;
+  if (!wardId || loading) return <AuthGuard><div className="text-center py-20 text-gray-400">로딩 중...</div></AuthGuard>;
+  if (!settings) return <AuthGuard><div className="text-center py-20 text-red-400">설정을 불러올 수 없습니다</div></AuthGuard>;
 
   const NumberInput = ({
     label, fieldKey, min = 0, max = 20, desc
@@ -154,6 +157,7 @@ export default function SettingsPage() {
   );
 
   return (
+    <AuthGuard>
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">병동 설정</h1>
@@ -528,5 +532,6 @@ export default function SettingsPage() {
         </Button>
       </div>
     </div>
+    </AuthGuard>
   );
 }

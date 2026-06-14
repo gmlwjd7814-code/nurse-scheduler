@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { nurseApi, scheduleApi, statsApi } from '@/lib/api';
 import { Nurse, NurseMonthlyStats } from '@/types';
-
-const WARD_ID = 1;
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/AuthGuard';
 
 export default function DashboardPage() {
+  const { wardId, wardName } = useAuth();
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -21,16 +22,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!wardId) return;
     async function load() {
       try {
         const [nurseData, scheduleData] = await Promise.all([
-          nurseApi.list(WARD_ID),
-          scheduleApi.get(WARD_ID, year, month).catch(() => null),
+          nurseApi.list(wardId),
+          scheduleApi.get(wardId, year, month).catch(() => null),
         ]);
         setNurses(nurseData);
         setScheduleExists(!!scheduleData);
         if (scheduleData) {
-          const statsData = await statsApi.get(WARD_ID, year, month).catch(() => []);
+          const statsData = await statsApi.get(wardId, year, month).catch(() => []);
           setStats(statsData);
         }
       } catch {
@@ -40,16 +42,17 @@ export default function DashboardPage() {
       }
     }
     load();
-  }, [year, month]);
+  }, [wardId, year, month]);
 
   const violationCount = stats.filter((s) => s.hasViolation).length;
 
   return (
+    <AuthGuard>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">대시보드</h1>
-          <p className="text-gray-500 text-sm mt-1">{year}년 {month}월 — 내과 병동</p>
+          <p className="text-gray-500 text-sm mt-1">{year}년 {month}월{wardName ? ` — ${wardName}` : ''}</p>
         </div>
         <Link href="/schedule">
           <Button size="sm">{scheduleExists ? '근무표 보기 →' : '근무표 생성 →'}</Button>
@@ -163,5 +166,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
     </div>
+    </AuthGuard>
   );
 }
