@@ -956,8 +956,9 @@ export function validateSchedule(
   for (const di of dayInfos) {
     const idx = di.day - 1;
 
+    // D는 수간호사 포함 전체 카운트, E/N은 THREE_SHIFT만
+    const dShift = allStates.filter((s) => s.shifts[idx] === 'D');
     const threeShift = allStates.filter((s) => s.nurse.workType === 'THREE_SHIFT');
-    const dShift = threeShift.filter((s) => s.shifts[idx] === 'D');
     const eShift = threeShift.filter((s) => s.shifts[idx] === 'E');
     const nShift = threeShift.filter((s) => s.shifts[idx] === 'N');
 
@@ -1197,7 +1198,7 @@ export async function generateSchedule(
   for (let i = 0; i < dayInfos.length; i++) {
     const dayInfo = dayInfos[i];
     const required = getRequiredCount('D', dayInfo, settings);
-    const dCount = threeShiftStates.filter((s) => s.shifts[i] === 'D').length;
+    const dCount = allStates.filter((s) => s.shifts[i] === 'D').length;
     let deficit = required - dCount;
     if (deficit <= 0) continue;
 
