@@ -321,10 +321,7 @@ function getValidShifts(
   allStates: NurseState[],
 ): ShiftCode[] {
   const candidates: ShiftCode[] = ['D', 'E', 'N', 'O'];
-  return candidates.filter((s) => {
-    if (s === 'O' && !canAssignOff(state, settings)) return false;
-    return canAssign(s, state, dayIdx, dayInfo, settings, allStates);
-  });
+  return candidates.filter((s) => canAssign(s, state, dayIdx, dayInfo, settings, allStates));
 }
 
 // ===== 그리디 점수 계산 (높을수록 배정 선호) =====
@@ -1187,26 +1184,9 @@ export async function generateSchedule(
         continue;
       }
 
-      if (canAssignOff(s, settings)) {
-        s.shifts[idx] = 'O';
-        applyShiftToState(s, 'O', dayInfo);
-      } else {
-        // 오프 할당량 초과 → 설정된 필요 인원 범위 안에서만 근무 배정
-        // (D/E 모두 설정 인원이 채워졌으면 O 유지 — 초과 근무 배정 방지)
-        const curD = threeShiftStates.filter((st) => st.shifts[idx] === 'D').length;
-        const curE = threeShiftStates.filter((st) => st.shifts[idx] === 'E').length;
-        const reqD = getRequiredCount('D', dayInfo, settings);
-        const reqE = getRequiredCount('E', dayInfo, settings);
-
-        let fs: ShiftCode = 'O';
-        if (curD < reqD && canAssign('D', s, idx, dayInfo, settings, threeShiftStates)) {
-          fs = 'D';
-        } else if (curE < reqE && canAssign('E', s, idx, dayInfo, settings, threeShiftStates)) {
-          fs = 'E';
-        }
-        s.shifts[idx] = fs;
-        applyShiftToState(s, fs, dayInfo);
-      }
+      // 필요 인원이 다 찼으면 무조건 오프 (설정 오프 횟수 초과 허용)
+      s.shifts[idx] = 'O';
+      applyShiftToState(s, 'O', dayInfo);
     }
   }
 
