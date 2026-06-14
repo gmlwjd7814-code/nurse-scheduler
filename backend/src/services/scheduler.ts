@@ -968,7 +968,9 @@ export function validateSchedule(
         });
       }
     };
-    chk(dShift, getRequiredCount('D', di, { weekdayDCount: 6, weekendDCount: 5, weekdayECount: 4, weekendECount: 3, weekdayNCount: 3, weekendNCount: 3 } as WardSettings, ), 'D');
+    chk(dShift, getRequiredCount('D', di, settings), 'D');
+    chk(eShift, getRequiredCount('E', di, settings), 'E');
+    chk(nShift, getRequiredCount('N', di, settings), 'N');
 
     // [1순위] 매일 Desk 가능 인력 최소 1명 (D/E 근무 중)
     const deShift = [...dShift, ...eShift];
@@ -1216,7 +1218,7 @@ export async function generateSchedule(
       }
     }
 
-    // 나머지 미배정 간호사 → O 또는 D
+    // 나머지 미배정 간호사 → O (설정 인원이 다 찼으면 무조건 O)
     for (const s of threeShiftStates) {
       if (s.shifts[idx] !== null) continue;
 
@@ -1231,13 +1233,17 @@ export async function generateSchedule(
         s.shifts[idx] = 'O';
         applyShiftToState(s, 'O', dayInfo);
       } else {
-        // 오프 할당량 초과 → D 우선, E는 상한 이내(requiredE*2)일 때만
-        const eCount = threeShiftStates.filter((st) => st.shifts[idx] === 'E').length;
-        const maxE = getRequiredCount('E', dayInfo, settings) * 2;
+        // 오프 할당량 초과 → 설정된 필요 인원 범위 안에서만 근무 배정
+        // (D/E 모두 설정 인원이 채워졌으면 O 유지 — 초과 근무 배정 방지)
+        const curD = threeShiftStates.filter((st) => st.shifts[idx] === 'D').length;
+        const curE = threeShiftStates.filter((st) => st.shifts[idx] === 'E').length;
+        const reqD = getRequiredCount('D', dayInfo, settings);
+        const reqE = getRequiredCount('E', dayInfo, settings);
+
         let fs: ShiftCode = 'O';
-        if (canAssign('D', s, idx, dayInfo, settings, threeShiftStates)) {
+        if (curD < reqD && canAssign('D', s, idx, dayInfo, settings, threeShiftStates)) {
           fs = 'D';
-        } else if (eCount < maxE && canAssign('E', s, idx, dayInfo, settings, threeShiftStates)) {
+        } else if (curE < reqE && canAssign('E', s, idx, dayInfo, settings, threeShiftStates)) {
           fs = 'E';
         }
         s.shifts[idx] = fs;
