@@ -1103,9 +1103,9 @@ export async function generateSchedule(
   for (const dayInfo of dayInfos) {
     const idx = dayInfo.day - 1;
 
-    // 현재 날 배정 현황
+    // 현재 날 배정 현황 (수간호사·야간전담 포함 전체 카운트 → 설정 인원과 정확히 맞춤)
     const counts: Record<string, number> = { D: 0, E: 0, N: 0, O: 0 };
-    for (const s of threeShiftStates) {
+    for (const s of allStates) {
       const sh = s.shifts[idx];
       if (sh && counts[sh] !== undefined) counts[sh]++;
     }
