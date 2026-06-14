@@ -101,6 +101,8 @@ router.get(
   })
 );
 
+const MAX_NURSES_PER_WARD = 38;
+
 // ===== 간호사 등록 =====
 router.post(
   '/',
@@ -111,6 +113,18 @@ router.post(
       res.status(400).json({
         success: false,
         error: '필수 항목 누락: name, rank, workType, capability, wardId',
+      });
+      return;
+    }
+
+    const countResult = await query(
+      `SELECT COUNT(*) AS cnt FROM nurses WHERE ward_id = $1`,
+      [wardId]
+    );
+    if (Number(countResult.rows[0].cnt) >= MAX_NURSES_PER_WARD) {
+      res.status(400).json({
+        success: false,
+        error: `간호사는 병동당 최대 ${MAX_NURSES_PER_WARD}명까지 등록할 수 있습니다`,
       });
       return;
     }

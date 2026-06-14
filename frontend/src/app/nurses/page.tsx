@@ -175,6 +175,8 @@ export default function NursesPage() {
     ? nurses
     : nurses.filter((n) => n.workType === filterWorkType);
 
+  const MAX_NURSES = 38;
+
   // 통계
   const counts = {
     total: nurses.length,
@@ -191,7 +193,17 @@ export default function NursesPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">간호사 관리</h1>
-        <Button size="sm" onClick={openCreate}>+ 간호사 등록</Button>
+        <div className="flex items-center gap-2">
+          {nurses.length >= MAX_NURSES && (
+            <span className="text-xs text-red-500 font-medium">최대 {MAX_NURSES}명 도달</span>
+          )}
+          {nurses.length >= MAX_NURSES - 5 && nurses.length < MAX_NURSES && (
+            <span className="text-xs text-amber-500 font-medium">{MAX_NURSES - nurses.length}명 추가 가능</span>
+          )}
+          <Button size="sm" onClick={openCreate} disabled={nurses.length >= MAX_NURSES}>
+            + 간호사 등록
+          </Button>
+        </div>
       </div>
 
       {/* 요약 */}
