@@ -11,6 +11,11 @@ import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
+// 컬럼 추가 마이그레이션 (모듈 로드 시 1회 실행, 라우트 핸들러가 완료를 기다림)
+const migrationReady = query(
+  `ALTER TABLE ward_settings ADD COLUMN IF NOT EXISTS head_nurse_sat_week SMALLINT DEFAULT 1`
+).catch(() => {});
+
 // ===== 병동 목록 조회 =====
 router.get(
   '/wards',
@@ -26,6 +31,7 @@ router.get(
 router.get(
   '/:wardId',
   asyncHandler(async (req: Request, res: Response) => {
+    await migrationReady;
     const { wardId } = req.params;
     const result = await query(
       `SELECT
@@ -59,6 +65,7 @@ router.get(
 router.put(
   '/:wardId',
   asyncHandler(async (req: Request, res: Response) => {
+    await migrationReady;
     const { wardId } = req.params;
     const {
       weekdayDCount, weekdayECount, weekdayNCount,
