@@ -991,22 +991,6 @@ export function validateSchedule(
       });
     }
 
-    // [1순위] 주임급(Charge+) 최소 1명 (D/E 근무 중, 수간호사 포함)
-    const headNurseOnDE = allStates.some(
-      (s) => s.nurse.workType === 'HEAD_NURSE' &&
-        (s.shifts[idx] === 'D' || s.shifts[idx] === 'E')
-    );
-    const hasSenior = headNurseOnDE || deShift.some(
-      (s) => s.nurse.rank === 'HEAD' || s.nurse.rank === 'CHARGE'
-    );
-    if (!hasSenior && deShift.length > 0) {
-      violations.push({
-        nurseId: 0, nurseName: '(전체)', day: di.day,
-        rule: 'NO_SENIOR_NURSE',
-        description: `${di.day}일 책임간호사 이상 부재 (최소 1명 필요)`,
-        severity: 'WARNING',
-      });
-    }
   }
 
   return violations;
