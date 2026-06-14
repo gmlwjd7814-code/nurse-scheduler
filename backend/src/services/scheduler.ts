@@ -979,9 +979,14 @@ export function validateSchedule(
     chk(eShift, getRequiredCount('E', di, settings), 'E');
     chk(nShift, getRequiredCount('N', di, settings), 'N');
 
-    // [1순위] 매일 Desk 가능 인력 최소 1명 (D/E 근무 중)
+    // [1순위] 매일 Desk 가능 인력 최소 1명 (D/E 근무 중, 수간호사 포함)
+    const headOnDE = allStates.filter(
+      (s) => s.nurse.workType === 'HEAD_NURSE' &&
+             (s.shifts[idx] === 'D' || s.shifts[idx] === 'E' || s.shifts[idx] === 'M') &&
+             s.nurse.capability === 'Desk'
+    );
     const deShift = [...dShift, ...eShift];
-    const hasDeskCapable = deShift.some((s) => s.nurse.capability === 'Desk');
+    const hasDeskCapable = headOnDE.length > 0 || deShift.some((s) => s.nurse.capability === 'Desk');
     if (!hasDeskCapable && deShift.length > 0) {
       violations.push({
         nurseId: 0, nurseName: '(전체)', day: di.day,
